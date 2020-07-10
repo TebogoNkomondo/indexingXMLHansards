@@ -1,0 +1,383 @@
+Filename: 4threadsIndex.py
+
+Line #    Mem usage    Increment   Line Contents
+================================================
+    30   84.031 MiB   84.031 MiB   @profile
+    31                             def allocate():
+    32                             
+    33                             
+    34   84.031 MiB    0.000 MiB       comm = MPI.COMM_WORLD
+    35   84.031 MiB    0.000 MiB       rank = comm.Get_rank()
+    36   84.031 MiB    0.000 MiB       size = comm.Get_size()
+    37                             
+    38   84.031 MiB    0.000 MiB       if rank == 0:
+    39                                     tree = ET.parse("hans.xml")
+    40                                     root = tree.getroot()
+    41                                     data1 = []
+    42                                     data = []
+    43                                     
+    44                                     H = DictionaryHandler()
+    45                                     
+    46                                     H = DictionaryHandler()
+    47                                     data2 = []
+    48                                     data2[:] = root.iter('{http://docs.oasis-open.org/legaldocml/ns/akn/3.0}debateSection')
+    49                                     
+    50                                     appendLength = len(data2) % 4
+    51                                     
+    52                                     boundarySlice = int(len(data2)/4)
+    53                                     
+    54                                     debatesData = []
+    55                                     for i in range(4):  
+    56                                         if i ==3:
+    57                                             debatesData.append(data2[boundarySlice*i:(boundarySlice*(i+1)+appendLength)])
+    58                                         debatesData.append(data2[(i)*boundarySlice:boundarySlice*(i+1)])    
+    59                                         
+    60                                     for i in root.iter('{http://docs.oasis-open.org/legaldocml/ns/akn/3.0}debateSection'):
+    61                                         
+    62                                         debateNameofInterest =  i.get('name') +': ' + i.find('{http://docs.oasis-open.org/legaldocml/ns/akn/3.0}heading').text  
+    63                                         
+    64                                         if debateNameofInterest != None:  
+    65                                             my1 = H.checkDebate(debateNameofInterest)
+    66                                         
+    67                                         for y in i.iter('{http://docs.oasis-open.org/legaldocml/ns/akn/3.0}speech'):
+    68                                             my2 = H.checkSpeaker(y.get('by'))
+    69                                             
+    70                                     H.writeSpeakersDictionary('./dictionaries/4threads/speakersDictionary4threads.pkl') 
+    71                                     H.writeDebatesDictionary('./dictionaries/4threads/debatesDictionary4threads.pkl')
+    72                                     
+    73                                     for k in range(1,4):
+    74                                         comm.send(debatesData[k], dest=k, tag=1)
+    75                                     
+    76                                     speakers = readSpeakersDictionary('./dictionaries/4threads/speakersDictionary4threads.pkl')   
+    77                                     debates = readDebatesDictionary('./dictionaries/4threads/debatesDictionary4threads.pkl')
+    78                                     
+    79                                     
+    80                                     myBitmap = Bitmap(len(debates), len(speakers))
+    81                             
+    82                                     for x in debatesData[0]: 
+    83                                         debateNameofInterest =  x.get('name') +': ' + x.find('{http://docs.oasis-open.org/legaldocml/ns/akn/3.0}heading').text    
+    84                                         for y in x.iter('{http://docs.oasis-open.org/legaldocml/ns/akn/3.0}speech'):
+    85                                             my1 = debates.get(debateNameofInterest) 
+    86                                             my2 = speakers.get(y.get('by'))
+    87                                             myBitmap.createBitmap(my1-1,my2-1)
+    88                                             
+    89                                     rank0Bitmap = (myBitmap.array)
+    90                                         
+    91                                     
+    92                                 else:
+    93   93.992 MiB    9.961 MiB           data = comm.recv(source=0, tag=1)
+    94                                     
+    95   93.992 MiB    0.000 MiB           speakers = readSpeakersDictionary('./dictionaries/4threads/speakersDictionary4threads.pkl')
+    96   93.992 MiB    0.000 MiB           debates = readDebatesDictionary('./dictionaries/4threads/debatesDictionary4threads.pkl')
+    97                                     
+    98   93.992 MiB    0.000 MiB           myBitmap = Bitmap(len(debates), len(speakers))
+    99                             
+   100   93.992 MiB    0.000 MiB           for x in data: 
+   101   93.992 MiB    0.000 MiB               debateNameofInterest =  x.get('name') +': ' + x.find('{http://docs.oasis-open.org/legaldocml/ns/akn/3.0}heading').text    
+   102   93.992 MiB    0.000 MiB               for y in x.iter('{http://docs.oasis-open.org/legaldocml/ns/akn/3.0}speech'):
+   103   93.992 MiB    0.000 MiB                   my1 = debates.get(debateNameofInterest) 
+   104   93.992 MiB    0.000 MiB                   my2 = speakers.get(y.get('by'))
+   105   93.992 MiB    0.000 MiB                   myBitmap.createBitmap(my1-1,my2-1)
+   106                                     
+   107   93.992 MiB    0.000 MiB           array = (myBitmap.array)
+   108   93.992 MiB    0.000 MiB           comm.send(array, dest=0)
+   109                             
+   110   93.992 MiB    0.000 MiB       if rank ==0:
+   111                                     rank1Bitmap = comm.recv(source=1)
+   112                                     rank2Bitmap = comm.recv(source=2)
+   113                                     rank3Bitmap = comm.recv(source=3)
+   114                                     
+   115                                     initialOR = np.logical_or(rank1Bitmap, rank2Bitmap, rank3Bitmap).astype(bool)
+   116                                     finalBitmap = np.logical_or(initialOR, rank0Bitmap).astype(bool)
+   117                             
+   118                                     # print('\n final bitmap using 4 threads: \n', finalBitmap)
+   119                                     writeBitmap(finalBitmap,'./bitmaps/finalBitmap4threads.npy')
+
+
+Filename: 4threadsIndex.py
+
+Line #    Mem usage    Increment   Line Contents
+================================================
+    30   84.020 MiB   84.020 MiB   @profile
+    31                             def allocate():
+    32                             
+    33                             
+    34   84.020 MiB    0.000 MiB       comm = MPI.COMM_WORLD
+    35   84.020 MiB    0.000 MiB       rank = comm.Get_rank()
+    36   84.020 MiB    0.000 MiB       size = comm.Get_size()
+    37                             
+    38   84.020 MiB    0.000 MiB       if rank == 0:
+    39                                     tree = ET.parse("hans.xml")
+    40                                     root = tree.getroot()
+    41                                     data1 = []
+    42                                     data = []
+    43                                     
+    44                                     H = DictionaryHandler()
+    45                                     
+    46                                     H = DictionaryHandler()
+    47                                     data2 = []
+    48                                     data2[:] = root.iter('{http://docs.oasis-open.org/legaldocml/ns/akn/3.0}debateSection')
+    49                                     
+    50                                     appendLength = len(data2) % 4
+    51                                     
+    52                                     boundarySlice = int(len(data2)/4)
+    53                                     
+    54                                     debatesData = []
+    55                                     for i in range(4):  
+    56                                         if i ==3:
+    57                                             debatesData.append(data2[boundarySlice*i:(boundarySlice*(i+1)+appendLength)])
+    58                                         debatesData.append(data2[(i)*boundarySlice:boundarySlice*(i+1)])    
+    59                                         
+    60                                     for i in root.iter('{http://docs.oasis-open.org/legaldocml/ns/akn/3.0}debateSection'):
+    61                                         
+    62                                         debateNameofInterest =  i.get('name') +': ' + i.find('{http://docs.oasis-open.org/legaldocml/ns/akn/3.0}heading').text  
+    63                                         
+    64                                         if debateNameofInterest != None:  
+    65                                             my1 = H.checkDebate(debateNameofInterest)
+    66                                         
+    67                                         for y in i.iter('{http://docs.oasis-open.org/legaldocml/ns/akn/3.0}speech'):
+    68                                             my2 = H.checkSpeaker(y.get('by'))
+    69                                             
+    70                                     H.writeSpeakersDictionary('./dictionaries/4threads/speakersDictionary4threads.pkl') 
+    71                                     H.writeDebatesDictionary('./dictionaries/4threads/debatesDictionary4threads.pkl')
+    72                                     
+    73                                     for k in range(1,4):
+    74                                         comm.send(debatesData[k], dest=k, tag=1)
+    75                                     
+    76                                     speakers = readSpeakersDictionary('./dictionaries/4threads/speakersDictionary4threads.pkl')   
+    77                                     debates = readDebatesDictionary('./dictionaries/4threads/debatesDictionary4threads.pkl')
+    78                                     
+    79                                     
+    80                                     myBitmap = Bitmap(len(debates), len(speakers))
+    81                             
+    82                                     for x in debatesData[0]: 
+    83                                         debateNameofInterest =  x.get('name') +': ' + x.find('{http://docs.oasis-open.org/legaldocml/ns/akn/3.0}heading').text    
+    84                                         for y in x.iter('{http://docs.oasis-open.org/legaldocml/ns/akn/3.0}speech'):
+    85                                             my1 = debates.get(debateNameofInterest) 
+    86                                             my2 = speakers.get(y.get('by'))
+    87                                             myBitmap.createBitmap(my1-1,my2-1)
+    88                                             
+    89                                     rank0Bitmap = (myBitmap.array)
+    90                                         
+    91                                     
+    92                                 else:
+    93   92.168 MiB    8.148 MiB           data = comm.recv(source=0, tag=1)
+    94                                     
+    95   92.168 MiB    0.000 MiB           speakers = readSpeakersDictionary('./dictionaries/4threads/speakersDictionary4threads.pkl')
+    96   92.168 MiB    0.000 MiB           debates = readDebatesDictionary('./dictionaries/4threads/debatesDictionary4threads.pkl')
+    97                                     
+    98   92.168 MiB    0.000 MiB           myBitmap = Bitmap(len(debates), len(speakers))
+    99                             
+   100   92.168 MiB    0.000 MiB           for x in data: 
+   101   92.168 MiB    0.000 MiB               debateNameofInterest =  x.get('name') +': ' + x.find('{http://docs.oasis-open.org/legaldocml/ns/akn/3.0}heading').text    
+   102   92.168 MiB    0.000 MiB               for y in x.iter('{http://docs.oasis-open.org/legaldocml/ns/akn/3.0}speech'):
+   103   92.168 MiB    0.000 MiB                   my1 = debates.get(debateNameofInterest) 
+   104   92.168 MiB    0.000 MiB                   my2 = speakers.get(y.get('by'))
+   105   92.168 MiB    0.000 MiB                   myBitmap.createBitmap(my1-1,my2-1)
+   106                                     
+   107   92.168 MiB    0.000 MiB           array = (myBitmap.array)
+   108   92.168 MiB    0.000 MiB           comm.send(array, dest=0)
+   109                             
+   110   92.168 MiB    0.000 MiB       if rank ==0:
+   111                                     rank1Bitmap = comm.recv(source=1)
+   112                                     rank2Bitmap = comm.recv(source=2)
+   113                                     rank3Bitmap = comm.recv(source=3)
+   114                                     
+   115                                     initialOR = np.logical_or(rank1Bitmap, rank2Bitmap, rank3Bitmap).astype(bool)
+   116                                     finalBitmap = np.logical_or(initialOR, rank0Bitmap).astype(bool)
+   117                             
+   118                                     # print('\n final bitmap using 4 threads: \n', finalBitmap)
+   119                                     writeBitmap(finalBitmap,'./bitmaps/finalBitmap4threads.npy')
+
+
+Filename: 4threadsIndex.py
+
+Line #    Mem usage    Increment   Line Contents
+================================================
+    30   83.797 MiB   83.797 MiB   @profile
+    31                             def allocate():
+    32                             
+    33                             
+    34   83.797 MiB    0.000 MiB       comm = MPI.COMM_WORLD
+    35   83.797 MiB    0.000 MiB       rank = comm.Get_rank()
+    36   83.797 MiB    0.000 MiB       size = comm.Get_size()
+    37                             
+    38   83.797 MiB    0.000 MiB       if rank == 0:
+    39                                     tree = ET.parse("hans.xml")
+    40                                     root = tree.getroot()
+    41                                     data1 = []
+    42                                     data = []
+    43                                     
+    44                                     H = DictionaryHandler()
+    45                                     
+    46                                     H = DictionaryHandler()
+    47                                     data2 = []
+    48                                     data2[:] = root.iter('{http://docs.oasis-open.org/legaldocml/ns/akn/3.0}debateSection')
+    49                                     
+    50                                     appendLength = len(data2) % 4
+    51                                     
+    52                                     boundarySlice = int(len(data2)/4)
+    53                                     
+    54                                     debatesData = []
+    55                                     for i in range(4):  
+    56                                         if i ==3:
+    57                                             debatesData.append(data2[boundarySlice*i:(boundarySlice*(i+1)+appendLength)])
+    58                                         debatesData.append(data2[(i)*boundarySlice:boundarySlice*(i+1)])    
+    59                                         
+    60                                     for i in root.iter('{http://docs.oasis-open.org/legaldocml/ns/akn/3.0}debateSection'):
+    61                                         
+    62                                         debateNameofInterest =  i.get('name') +': ' + i.find('{http://docs.oasis-open.org/legaldocml/ns/akn/3.0}heading').text  
+    63                                         
+    64                                         if debateNameofInterest != None:  
+    65                                             my1 = H.checkDebate(debateNameofInterest)
+    66                                         
+    67                                         for y in i.iter('{http://docs.oasis-open.org/legaldocml/ns/akn/3.0}speech'):
+    68                                             my2 = H.checkSpeaker(y.get('by'))
+    69                                             
+    70                                     H.writeSpeakersDictionary('./dictionaries/4threads/speakersDictionary4threads.pkl') 
+    71                                     H.writeDebatesDictionary('./dictionaries/4threads/debatesDictionary4threads.pkl')
+    72                                     
+    73                                     for k in range(1,4):
+    74                                         comm.send(debatesData[k], dest=k, tag=1)
+    75                                     
+    76                                     speakers = readSpeakersDictionary('./dictionaries/4threads/speakersDictionary4threads.pkl')   
+    77                                     debates = readDebatesDictionary('./dictionaries/4threads/debatesDictionary4threads.pkl')
+    78                                     
+    79                                     
+    80                                     myBitmap = Bitmap(len(debates), len(speakers))
+    81                             
+    82                                     for x in debatesData[0]: 
+    83                                         debateNameofInterest =  x.get('name') +': ' + x.find('{http://docs.oasis-open.org/legaldocml/ns/akn/3.0}heading').text    
+    84                                         for y in x.iter('{http://docs.oasis-open.org/legaldocml/ns/akn/3.0}speech'):
+    85                                             my1 = debates.get(debateNameofInterest) 
+    86                                             my2 = speakers.get(y.get('by'))
+    87                                             myBitmap.createBitmap(my1-1,my2-1)
+    88                                             
+    89                                     rank0Bitmap = (myBitmap.array)
+    90                                         
+    91                                     
+    92                                 else:
+    93   91.531 MiB    7.734 MiB           data = comm.recv(source=0, tag=1)
+    94                                     
+    95   91.531 MiB    0.000 MiB           speakers = readSpeakersDictionary('./dictionaries/4threads/speakersDictionary4threads.pkl')
+    96   91.531 MiB    0.000 MiB           debates = readDebatesDictionary('./dictionaries/4threads/debatesDictionary4threads.pkl')
+    97                                     
+    98   91.531 MiB    0.000 MiB           myBitmap = Bitmap(len(debates), len(speakers))
+    99                             
+   100   91.531 MiB    0.000 MiB           for x in data: 
+   101   91.531 MiB    0.000 MiB               debateNameofInterest =  x.get('name') +': ' + x.find('{http://docs.oasis-open.org/legaldocml/ns/akn/3.0}heading').text    
+   102   91.531 MiB    0.000 MiB               for y in x.iter('{http://docs.oasis-open.org/legaldocml/ns/akn/3.0}speech'):
+   103   91.531 MiB    0.000 MiB                   my1 = debates.get(debateNameofInterest) 
+   104   91.531 MiB    0.000 MiB                   my2 = speakers.get(y.get('by'))
+   105   91.531 MiB    0.000 MiB                   myBitmap.createBitmap(my1-1,my2-1)
+   106                                     
+   107   91.531 MiB    0.000 MiB           array = (myBitmap.array)
+   108   91.531 MiB    0.000 MiB           comm.send(array, dest=0)
+   109                             
+   110   91.531 MiB    0.000 MiB       if rank ==0:
+   111                                     rank1Bitmap = comm.recv(source=1)
+   112                                     rank2Bitmap = comm.recv(source=2)
+   113                                     rank3Bitmap = comm.recv(source=3)
+   114                                     
+   115                                     initialOR = np.logical_or(rank1Bitmap, rank2Bitmap, rank3Bitmap).astype(bool)
+   116                                     finalBitmap = np.logical_or(initialOR, rank0Bitmap).astype(bool)
+   117                             
+   118                                     # print('\n final bitmap using 4 threads: \n', finalBitmap)
+   119                                     writeBitmap(finalBitmap,'./bitmaps/finalBitmap4threads.npy')
+
+
+Filename: 4threadsIndex.py
+
+Line #    Mem usage    Increment   Line Contents
+================================================
+    30   84.125 MiB   84.125 MiB   @profile
+    31                             def allocate():
+    32                             
+    33                             
+    34   84.125 MiB    0.000 MiB       comm = MPI.COMM_WORLD
+    35   84.125 MiB    0.000 MiB       rank = comm.Get_rank()
+    36   84.125 MiB    0.000 MiB       size = comm.Get_size()
+    37                             
+    38   84.125 MiB    0.000 MiB       if rank == 0:
+    39   95.340 MiB   11.215 MiB           tree = ET.parse("hans.xml")
+    40   95.340 MiB    0.000 MiB           root = tree.getroot()
+    41   95.340 MiB    0.000 MiB           data1 = []
+    42   95.340 MiB    0.000 MiB           data = []
+    43                                     
+    44   95.340 MiB    0.000 MiB           H = DictionaryHandler()
+    45                                     
+    46   95.340 MiB    0.000 MiB           H = DictionaryHandler()
+    47   95.340 MiB    0.000 MiB           data2 = []
+    48   95.340 MiB    0.000 MiB           data2[:] = root.iter('{http://docs.oasis-open.org/legaldocml/ns/akn/3.0}debateSection')
+    49                                     
+    50   95.340 MiB    0.000 MiB           appendLength = len(data2) % 4
+    51                                     
+    52   95.340 MiB    0.000 MiB           boundarySlice = int(len(data2)/4)
+    53                                     
+    54   95.340 MiB    0.000 MiB           debatesData = []
+    55   95.340 MiB    0.000 MiB           for i in range(4):  
+    56   95.340 MiB    0.000 MiB               if i ==3:
+    57   95.340 MiB    0.000 MiB                   debatesData.append(data2[boundarySlice*i:(boundarySlice*(i+1)+appendLength)])
+    58   95.340 MiB    0.000 MiB               debatesData.append(data2[(i)*boundarySlice:boundarySlice*(i+1)])    
+    59                                         
+    60   95.340 MiB    0.000 MiB           for i in root.iter('{http://docs.oasis-open.org/legaldocml/ns/akn/3.0}debateSection'):
+    61                                         
+    62   95.340 MiB    0.000 MiB               debateNameofInterest =  i.get('name') +': ' + i.find('{http://docs.oasis-open.org/legaldocml/ns/akn/3.0}heading').text  
+    63                                         
+    64   95.340 MiB    0.000 MiB               if debateNameofInterest != None:  
+    65   95.340 MiB    0.000 MiB                   my1 = H.checkDebate(debateNameofInterest)
+    66                                         
+    67   95.340 MiB    0.000 MiB               for y in i.iter('{http://docs.oasis-open.org/legaldocml/ns/akn/3.0}speech'):
+    68   95.340 MiB    0.000 MiB                   my2 = H.checkSpeaker(y.get('by'))
+    69                                             
+    70   95.340 MiB    0.000 MiB           H.writeSpeakersDictionary('./dictionaries/4threads/speakersDictionary4threads.pkl') 
+    71   95.340 MiB    0.000 MiB           H.writeDebatesDictionary('./dictionaries/4threads/debatesDictionary4threads.pkl')
+    72                                     
+    73  107.715 MiB    0.000 MiB           for k in range(1,4):
+    74  107.715 MiB    5.094 MiB               comm.send(debatesData[k], dest=k, tag=1)
+    75                                     
+    76  107.715 MiB    0.000 MiB           speakers = readSpeakersDictionary('./dictionaries/4threads/speakersDictionary4threads.pkl')   
+    77  107.715 MiB    0.000 MiB           debates = readDebatesDictionary('./dictionaries/4threads/debatesDictionary4threads.pkl')
+    78                                     
+    79                                     
+    80  107.715 MiB    0.000 MiB           myBitmap = Bitmap(len(debates), len(speakers))
+    81                             
+    82  107.715 MiB    0.000 MiB           for x in debatesData[0]: 
+    83  107.715 MiB    0.000 MiB               debateNameofInterest =  x.get('name') +': ' + x.find('{http://docs.oasis-open.org/legaldocml/ns/akn/3.0}heading').text    
+    84  107.715 MiB    0.000 MiB               for y in x.iter('{http://docs.oasis-open.org/legaldocml/ns/akn/3.0}speech'):
+    85  107.715 MiB    0.000 MiB                   my1 = debates.get(debateNameofInterest) 
+    86  107.715 MiB    0.000 MiB                   my2 = speakers.get(y.get('by'))
+    87  107.715 MiB    0.000 MiB                   myBitmap.createBitmap(my1-1,my2-1)
+    88                                             
+    89  107.715 MiB    0.000 MiB           rank0Bitmap = (myBitmap.array)
+    90                                         
+    91                                     
+    92                                 else:
+    93                                     data = comm.recv(source=0, tag=1)
+    94                                     
+    95                                     speakers = readSpeakersDictionary('./dictionaries/4threads/speakersDictionary4threads.pkl')
+    96                                     debates = readDebatesDictionary('./dictionaries/4threads/debatesDictionary4threads.pkl')
+    97                                     
+    98                                     myBitmap = Bitmap(len(debates), len(speakers))
+    99                             
+   100                                     for x in data: 
+   101                                         debateNameofInterest =  x.get('name') +': ' + x.find('{http://docs.oasis-open.org/legaldocml/ns/akn/3.0}heading').text    
+   102                                         for y in x.iter('{http://docs.oasis-open.org/legaldocml/ns/akn/3.0}speech'):
+   103                                             my1 = debates.get(debateNameofInterest) 
+   104                                             my2 = speakers.get(y.get('by'))
+   105                                             myBitmap.createBitmap(my1-1,my2-1)
+   106                                     
+   107                                     array = (myBitmap.array)
+   108                                     comm.send(array, dest=0)
+   109                             
+   110  107.715 MiB    0.000 MiB       if rank ==0:
+   111  107.918 MiB    0.203 MiB           rank1Bitmap = comm.recv(source=1)
+   112  107.918 MiB    0.000 MiB           rank2Bitmap = comm.recv(source=2)
+   113  107.918 MiB    0.000 MiB           rank3Bitmap = comm.recv(source=3)
+   114                                     
+   115  107.918 MiB    0.000 MiB           initialOR = np.logical_or(rank1Bitmap, rank2Bitmap, rank3Bitmap).astype(bool)
+   116  107.918 MiB    0.000 MiB           finalBitmap = np.logical_or(initialOR, rank0Bitmap).astype(bool)
+   117                             
+   118                                     # print('\n final bitmap using 4 threads: \n', finalBitmap)
+   119  107.918 MiB    0.000 MiB           writeBitmap(finalBitmap,'./bitmaps/finalBitmap4threads.npy')
+

@@ -1,0 +1,252 @@
+Filename: EvenOddIndex.py
+
+Line #    Mem usage    Increment   Line Contents
+================================================
+    29   83.977 MiB   83.977 MiB   @profile
+    30                             def allocate():
+    31                             
+    32                             
+    33   83.977 MiB    0.000 MiB       comm = MPI.COMM_WORLD
+    34   83.977 MiB    0.000 MiB       rank = comm.Get_rank()
+    35   83.977 MiB    0.000 MiB       size = comm.Get_size()
+    36                             
+    37   83.977 MiB    0.000 MiB       if rank == 0:
+    38                                     tree = ET.parse("hans.xml")
+    39                                     root = tree.getroot()
+    40                                     data1 = []
+    41                                     data = []
+    42                                     
+    43                                     H = DictionaryHandler()
+    44                             
+    45                                     dates = []
+    46                                     for i in root.iter('{http://docs.oasis-open.org/legaldocml/ns/akn/3.0}debateSection'):
+    47                                         
+    48                                         debateNameofInterest =  i.get('name') +': ' + i.find('{http://docs.oasis-open.org/legaldocml/ns/akn/3.0}heading').text  
+    49                                         
+    50                                         if debateNameofInterest != None:  
+    51                                             my1 = H.checkDebate(debateNameofInterest)
+    52                                         
+    53                                         if my1 %2 == 0:
+    54                                             data1.append(i)
+    55                                         else: 
+    56                                             data.append(i)
+    57                                         
+    58                                         
+    59                                         for y in i.iter('{http://docs.oasis-open.org/legaldocml/ns/akn/3.0}speech'):
+    60                                             my2 = H.checkSpeaker(y.get('by'))
+    61                                             
+    62                                             
+    63                                     H.writeSpeakersDictionary('./dictionaries/EvenOdd/speakersEvenOdd.pkl')
+    64                                     print('\n', len(dates) , '\n')    
+    65                                     H.writeDebatesDictionary('./dictionaries/EvenOdd/debatesEvenOdd.pkl')
+    66                                         
+    67                                     comm.send(data1, dest=1, tag=1)
+    68                                     comm.send(data, dest=2, tag=1)
+    69                             
+    70                                 else:
+    71  106.633 MiB   22.656 MiB           data = comm.recv(source=0, tag=1)
+    72                                     
+    73  106.633 MiB    0.000 MiB           debates = readDebatesDictionary('./dictionaries/EvenOdd/debatesEvenOdd.pkl')
+    74  106.633 MiB    0.000 MiB           speakers = readSpeakersDictionary('./dictionaries/EvenOdd/speakersEvenOdd.pkl')
+    75                                     
+    76  106.633 MiB    0.000 MiB           myBitmap = Bitmap(len(debates), len(speakers))
+    77                             
+    78  106.633 MiB    0.000 MiB           for x in data: 
+    79  106.633 MiB    0.000 MiB               debateNameofInterest =  x.get('name') +': ' + x.find('{http://docs.oasis-open.org/legaldocml/ns/akn/3.0}heading').text    
+    80  106.633 MiB    0.000 MiB               for y in x.iter('{http://docs.oasis-open.org/legaldocml/ns/akn/3.0}speech'):
+    81  106.633 MiB    0.000 MiB                   my1 = debates.get(debateNameofInterest) 
+    82  106.633 MiB    0.000 MiB                   my2 = speakers.get(y.get('by'))
+    83  106.633 MiB    0.000 MiB                   myBitmap.createBitmap(my1-1,my2-1)
+    84                                     
+    85  106.633 MiB    0.000 MiB           array = (myBitmap.array)
+    86  106.633 MiB    0.000 MiB           comm.send(array, dest=0)
+    87                                     
+    88                                     
+    89  106.633 MiB    0.000 MiB       if rank ==0:
+    90                                     even = comm.recv(source=1)
+    91                                     odd = comm.recv(source=2)
+    92                                     
+    93                                     
+    94                                     finalBitmap =np.zeros((len(even), len(even[1])),dtype=bool)
+    95                             
+    96                                     for i in range(len(even)):
+    97                                         if i %2 == 0:
+    98                                             finalBitmap[i] = odd[i]
+    99                                         else: 
+   100                                             finalBitmap[i] = even[i]
+   101                                             
+   102                             
+   103                                     # print('Final bitmap Even Odd: \n',finalBitmap ,'\n')
+   104                                     writeBitmap(finalBitmap,'./bitmaps/finalBitmapEvenOdd.npy')
+
+
+Filename: EvenOddIndex.py
+
+Line #    Mem usage    Increment   Line Contents
+================================================
+    29   83.898 MiB   83.898 MiB   @profile
+    30                             def allocate():
+    31                             
+    32                             
+    33   83.898 MiB    0.000 MiB       comm = MPI.COMM_WORLD
+    34   83.898 MiB    0.000 MiB       rank = comm.Get_rank()
+    35   83.898 MiB    0.000 MiB       size = comm.Get_size()
+    36                             
+    37   83.898 MiB    0.000 MiB       if rank == 0:
+    38                                     tree = ET.parse("hans.xml")
+    39                                     root = tree.getroot()
+    40                                     data1 = []
+    41                                     data = []
+    42                                     
+    43                                     H = DictionaryHandler()
+    44                             
+    45                                     dates = []
+    46                                     for i in root.iter('{http://docs.oasis-open.org/legaldocml/ns/akn/3.0}debateSection'):
+    47                                         
+    48                                         debateNameofInterest =  i.get('name') +': ' + i.find('{http://docs.oasis-open.org/legaldocml/ns/akn/3.0}heading').text  
+    49                                         
+    50                                         if debateNameofInterest != None:  
+    51                                             my1 = H.checkDebate(debateNameofInterest)
+    52                                         
+    53                                         if my1 %2 == 0:
+    54                                             data1.append(i)
+    55                                         else: 
+    56                                             data.append(i)
+    57                                         
+    58                                         
+    59                                         for y in i.iter('{http://docs.oasis-open.org/legaldocml/ns/akn/3.0}speech'):
+    60                                             my2 = H.checkSpeaker(y.get('by'))
+    61                                             
+    62                                             
+    63                                     H.writeSpeakersDictionary('./dictionaries/EvenOdd/speakersEvenOdd.pkl')
+    64                                     print('\n', len(dates) , '\n')    
+    65                                     H.writeDebatesDictionary('./dictionaries/EvenOdd/debatesEvenOdd.pkl')
+    66                                         
+    67                                     comm.send(data1, dest=1, tag=1)
+    68                                     comm.send(data, dest=2, tag=1)
+    69                             
+    70                                 else:
+    71  109.012 MiB   25.113 MiB           data = comm.recv(source=0, tag=1)
+    72                                     
+    73  109.012 MiB    0.000 MiB           debates = readDebatesDictionary('./dictionaries/EvenOdd/debatesEvenOdd.pkl')
+    74  109.012 MiB    0.000 MiB           speakers = readSpeakersDictionary('./dictionaries/EvenOdd/speakersEvenOdd.pkl')
+    75                                     
+    76  109.012 MiB    0.000 MiB           myBitmap = Bitmap(len(debates), len(speakers))
+    77                             
+    78  109.012 MiB    0.000 MiB           for x in data: 
+    79  109.012 MiB    0.000 MiB               debateNameofInterest =  x.get('name') +': ' + x.find('{http://docs.oasis-open.org/legaldocml/ns/akn/3.0}heading').text    
+    80  109.012 MiB    0.000 MiB               for y in x.iter('{http://docs.oasis-open.org/legaldocml/ns/akn/3.0}speech'):
+    81  109.012 MiB    0.000 MiB                   my1 = debates.get(debateNameofInterest) 
+    82  109.012 MiB    0.000 MiB                   my2 = speakers.get(y.get('by'))
+    83  109.012 MiB    0.000 MiB                   myBitmap.createBitmap(my1-1,my2-1)
+    84                                     
+    85  109.012 MiB    0.000 MiB           array = (myBitmap.array)
+    86  109.012 MiB    0.000 MiB           comm.send(array, dest=0)
+    87                                     
+    88                                     
+    89  109.012 MiB    0.000 MiB       if rank ==0:
+    90                                     even = comm.recv(source=1)
+    91                                     odd = comm.recv(source=2)
+    92                                     
+    93                                     
+    94                                     finalBitmap =np.zeros((len(even), len(even[1])),dtype=bool)
+    95                             
+    96                                     for i in range(len(even)):
+    97                                         if i %2 == 0:
+    98                                             finalBitmap[i] = odd[i]
+    99                                         else: 
+   100                                             finalBitmap[i] = even[i]
+   101                                             
+   102                             
+   103                                     # print('Final bitmap Even Odd: \n',finalBitmap ,'\n')
+   104                                     writeBitmap(finalBitmap,'./bitmaps/finalBitmapEvenOdd.npy')
+
+
+
+ 0 
+
+Filename: EvenOddIndex.py
+
+Line #    Mem usage    Increment   Line Contents
+================================================
+    29   83.766 MiB   83.766 MiB   @profile
+    30                             def allocate():
+    31                             
+    32                             
+    33   83.766 MiB    0.000 MiB       comm = MPI.COMM_WORLD
+    34   83.766 MiB    0.000 MiB       rank = comm.Get_rank()
+    35   83.766 MiB    0.000 MiB       size = comm.Get_size()
+    36                             
+    37   83.766 MiB    0.000 MiB       if rank == 0:
+    38   95.164 MiB   11.398 MiB           tree = ET.parse("hans.xml")
+    39   95.164 MiB    0.000 MiB           root = tree.getroot()
+    40   95.164 MiB    0.000 MiB           data1 = []
+    41   95.164 MiB    0.000 MiB           data = []
+    42                                     
+    43   95.164 MiB    0.000 MiB           H = DictionaryHandler()
+    44                             
+    45   95.164 MiB    0.000 MiB           dates = []
+    46   95.164 MiB    0.000 MiB           for i in root.iter('{http://docs.oasis-open.org/legaldocml/ns/akn/3.0}debateSection'):
+    47                                         
+    48   95.164 MiB    0.000 MiB               debateNameofInterest =  i.get('name') +': ' + i.find('{http://docs.oasis-open.org/legaldocml/ns/akn/3.0}heading').text  
+    49                                         
+    50   95.164 MiB    0.000 MiB               if debateNameofInterest != None:  
+    51   95.164 MiB    0.000 MiB                   my1 = H.checkDebate(debateNameofInterest)
+    52                                         
+    53   95.164 MiB    0.000 MiB               if my1 %2 == 0:
+    54   95.164 MiB    0.000 MiB                   data1.append(i)
+    55                                         else: 
+    56   95.164 MiB    0.000 MiB                   data.append(i)
+    57                                         
+    58                                         
+    59   95.164 MiB    0.000 MiB               for y in i.iter('{http://docs.oasis-open.org/legaldocml/ns/akn/3.0}speech'):
+    60   95.164 MiB    0.000 MiB                   my2 = H.checkSpeaker(y.get('by'))
+    61                                             
+    62                                             
+    63   95.164 MiB    0.000 MiB           H.writeSpeakersDictionary('./dictionaries/EvenOdd/speakersEvenOdd.pkl')
+    64   95.164 MiB    0.000 MiB           print('\n', len(dates) , '\n')    
+    65   95.164 MiB    0.000 MiB           H.writeDebatesDictionary('./dictionaries/EvenOdd/debatesEvenOdd.pkl')
+    66                                         
+    67  109.473 MiB   14.309 MiB           comm.send(data1, dest=1, tag=1)
+    68  109.953 MiB    0.480 MiB           comm.send(data, dest=2, tag=1)
+    69                             
+    70                                 else:
+    71                                     data = comm.recv(source=0, tag=1)
+    72                                     
+    73                                     debates = readDebatesDictionary('./dictionaries/EvenOdd/debatesEvenOdd.pkl')
+    74                                     speakers = readSpeakersDictionary('./dictionaries/EvenOdd/speakersEvenOdd.pkl')
+    75                                     
+    76                                     myBitmap = Bitmap(len(debates), len(speakers))
+    77                             
+    78                                     for x in data: 
+    79                                         debateNameofInterest =  x.get('name') +': ' + x.find('{http://docs.oasis-open.org/legaldocml/ns/akn/3.0}heading').text    
+    80                                         for y in x.iter('{http://docs.oasis-open.org/legaldocml/ns/akn/3.0}speech'):
+    81                                             my1 = debates.get(debateNameofInterest) 
+    82                                             my2 = speakers.get(y.get('by'))
+    83                                             myBitmap.createBitmap(my1-1,my2-1)
+    84                                     
+    85                                     array = (myBitmap.array)
+    86                                     comm.send(array, dest=0)
+    87                                     
+    88                                     
+    89  109.953 MiB    0.000 MiB       if rank ==0:
+    90  109.953 MiB    0.000 MiB           even = comm.recv(source=1)
+    91  109.953 MiB    0.000 MiB           odd = comm.recv(source=2)
+    92                                     
+    93                                     
+    94  109.953 MiB    0.000 MiB           finalBitmap =np.zeros((len(even), len(even[1])),dtype=bool)
+    95                             
+    96  109.953 MiB    0.000 MiB           for i in range(len(even)):
+    97  109.953 MiB    0.000 MiB               if i %2 == 0:
+    98  109.953 MiB    0.000 MiB                   finalBitmap[i] = odd[i]
+    99                                         else: 
+   100  109.953 MiB    0.000 MiB                   finalBitmap[i] = even[i]
+   101                                             
+   102                             
+   103                                     # print('Final bitmap Even Odd: \n',finalBitmap ,'\n')
+   104  109.953 MiB    0.000 MiB           writeBitmap(finalBitmap,'./bitmaps/finalBitmapEvenOdd.npy')
+
+
+     
+     
+ 
