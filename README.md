@@ -7,7 +7,9 @@
 - Furthermore memory and CPU usage based benchmarks and optimizations are carried out to ensure program efficiency.
 
 ## RUNNING CODE
-For running the code the **make** command can be used
+- For running the code the **make** command can be used.
+- This will run 2 different schemes for generating indexes. The first scheme uses 3 threads, but only has 2 threads involved index generation and the second uses 4 threads. These schemes have varying performances which can be found in the benchmarking folder.
+- Additionally this will run the automated search scheme that allows users to query the generated bitmap indexes.
 
 ## SEARCHING:
 - For searching it was assumed that the user will know the names of the 2 debates which they intend to search along with the headings of those 2 debates and will enter them in the format:
