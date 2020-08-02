@@ -1,9 +1,7 @@
-The following libraries are used:
-
-1. MPI4Py
-2. json 
-3. numpy 
-4. pickle 
-5. xml.etree.ElementTree 
-6. sys
-7. time
+MPI4Py
+json 
+numpy 
+pickle 
+xml.etree.ElementTree 
+sys
+time
